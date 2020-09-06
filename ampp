@@ -1,0 +1,594 @@
+#!/usr/bin/python3
+usage_header = \
+'''
+AMPP (All My Programming Projects)
+A quick script to be used to navigate through my coding projects easier, and create and manage different projects
+'''
+
+# all my stupid imports
+import keyboard, os, sys, shlex
+import subprocess as sub
+
+
+# static class storing constant valid arguments
+class Arg:
+	help = ['-h', '--help']
+	ls = ['-l', '--list']
+	create = ['-c', '--cre8', '--create']
+	lsproj = ['-lp', '--list-project', '-lproj', '-listproj', '-list-proj']
+	find = '-f --find --find-project -find -fp --fp'.split()
+	zipp = '-z --zip -zip -archive'.split()
+	newproj = '-np --new-project -newproject -newproj -nproj'.split()
+
+class ArgHelp:
+	lsp = '''
+List Project
+  List all the files and folders in your project.
+
+  ./ampp -lp <Project>
+'''
+	find = '''
+Find Project
+  Find the location of a project.
+
+'''
+	zip = '''
+Zip Project
+  Zip a project of your choice.
+
+  ./ampp -z <Project>	
+'''
+	np = '''
+Create A New Project
+  Create a new project.
+
+  ./ampp -np <Project>
+'''
+
+# fancy colors. wow
+class Color:
+	FG_BLACK =   u'\u001b[30m'
+	FG_RED =     u'\u001b[31m'
+	FG_GREEN =   u'\u001b[32m'
+	FG_YELLOW =  u'\u001b[33m'
+	FG_BLUE =    u'\u001b[34m'
+	FG_MAGENTA = u'\u001b[35m'
+
+# prints the usage of this script
+def print_usage()-> None :
+	print('Usage: ampp [args...]')
+	print(f'''\
+{usage_header}
+
+Options:
+
+  -h/--help:                            print this output
+  -l/--list:                            list all the projects in the Code folder
+  -c/--cre8:                            create a folder 'Code' if it already does not exist
+  -lp/--list-project=<project-name>:    list all files and folders in a project
+  -z/--zip=<project>:                   zip a project to a target directory
+  -f/--find=<project>:                  find the location for a project
+  -np/--new-project=<proj> [proj-type]  create a new project
+''')
+	pass
+
+
+# verify if the string is equal to a supported language
+def verify_language(lang: str)-> bool:
+	return lang in "HTML NodeJS C++ C Python Java C# Bash Haskell Ruby Assembly".split()
+
+# return the programming language folder name that's recognized/accepted
+def interpret_lang_type(lang: str)->str:
+	if lang == "cpp":
+		return 'C++'
+	elif lang == 'c':
+		return 'C'
+	elif lang == 'java':
+		return 'Java'
+	elif lang == 'cs':
+		return 'C#'
+	elif lang == 'node':
+		return 'NodeJS'
+	elif lang == 'py':
+		return 'Python'
+	elif lang == 'html':
+		return 'HTML'
+	elif lang == 'as':
+		return 'Assembly'
+	elif lang == 'hskl':
+		return 'Haskell'
+	else:
+		return lang
+
+# check if the Code Folder exists:
+def check_code_folder()->bool:
+	return os.path.exists(os.getcwd() + '/Code')
+
+# asks the user if they would like to create the Code folder
+def prompt_create()-> bool:
+	# if the folder 'Code' does not exist in the current directory
+	if not 'Code' in os.listdir(os.getcwd()):
+		print('The Code folder does not seem to be here...')
+		# if the user wants to make the folder now
+		if input('Would you like to create the folder now? >') in shlex.split('y yes yup yessir pls plz "pretty please"'):
+			# run shell to make a folder
+			response = sub.getstatusoutput('mkdir Code')
+			# if the shell failed to make the folder for some reason, print the error
+			if response[0] != 0:
+				print("There seems to be an error. Look here:\n" + response[1])
+				return False
+			# else, well the folder was made
+			else:
+				print("Your folder has been made!")
+				return True
+		# user did not want to make the folder 'Code'
+		else:
+			print("Okay. You can do it on your own later.")
+			return False
+	# the 'Code' folder already exists
+	else:
+		return True
+
+# output colorized text to make it look fancy
+def format_color_folder(filename: str)-> str:
+	
+	# C/C++ Folders (output blue (light))
+	if filename.title() == "C++" or filename.title() == "C":
+		return u'\u001b[34;1m◖' + filename + u'\u25D7'
+	
+	# Java Folders(pinkish)
+	elif filename.title() == "Java":
+		return u'\u001b[31;1m◖' + filename + u'\u25D7'
+	
+	# C# Folders (light cyan)
+	elif filename.title() == "C#":
+		return u'\u001b[36m◖' + filename + u'\u25D7'
+	
+	# NodeJS (lime green)
+	elif filename.title() == "NodeJS":
+		return u'\u001b[321m◖' + filename + u'\u25D7'
+
+	# Python (darker orange)
+	elif filename.title() == "Python":
+		return u'\u001b[33;1m◖' + filename + u'\u25D7'
+	
+	# Web/HTML (Pink-ish)
+	elif filename.title() == "HTML" or filename.title() == "Web":
+		return u'\u001b[35m◖' + filename + u'\u25D7'
+	
+	# Assembly (violet-ish)
+	elif filename.title() == "Assembly" or filename.title() == "Assemble":
+		return u'\u001b[31m◖' + filename + u'\u25D7'
+	
+	# Misc folders
+	else:
+		return u'\u001b[36;1m◖' + filename + u'\u25D7'
+
+# find a project and print the location of the project
+def find_project(proj_name: str)->None:
+	if not check_code_folder():
+		if not prompt_create():
+			sys.exit(1)
+	folder = os.getcwd() + "/Code/"
+	found = False
+	for proj_type in os.listdir(folder):
+		if os.path.isdir(folder  + proj_type):
+			current_folder = folder + proj_type + '/'
+			for project in os.listdir(current_folder):
+				if os.path.isdir(current_folder + project) and project == proj_name:
+					found = True
+					print(current_folder + project + '\n')
+	if not found:
+		print("Failed to locate " + proj_name)
+
+
+# fixes the colors after printing
+def fix_color():
+	print(u'\u001b[0m')
+
+
+
+# find a folder containing the project being searched, and print out the contents
+def find_and_print_project(proj: str)-> None:
+	if not check_code_folder():
+		if not prompt_create():
+			sys.exit(1)
+	folder = os.getcwd() + "/Code/"
+	found = False
+	for proj_type in os.listdir(folder):
+		# this programming language file/folder is a folder
+		if os.path.isdir(folder  + proj_type):
+			current_folder = folder + proj_type + '/'
+			# loop through the projects
+			for project in os.listdir(current_folder):
+				# if the project is a folder and the project's name is equal to the one requested
+				if os.path.isdir(current_folder + project) and project == proj:
+					found = True
+					print("\nFiles in " + current_folder + proj)
+					# print all the files and folders in the project folder
+					for file in os.listdir(current_folder + project):
+						sys.stdout.write('  └> ')
+						if os.path.isdir(current_folder + project + '/' + file):
+							sys.stdout.write('\u001b[34;1m' + file )
+						else:
+							sys.stdout.write(file)
+						fix_color()
+	if not found:
+		print("Failed to locate project " + proj)
+
+
+
+# similar to find_and_print_project, but wants a specific project type
+def find_proj_under(target_project: str, target_type: str)-> None:
+	
+	if not check_code_folder():
+		if not prompt_create():
+			sys.exit(1)
+
+	src_folder = os.getcwd() + "/Code/"
+	found = False
+	project_lang = str()
+	
+	target_type = interpret_lang_type(target_type)
+
+	# loop through the Programming Languages
+	for proj_type in os.listdir(src_folder):
+		# this Programming Language matches the one specified and is a folder
+		if os.path.isdir(src_folder + proj_type) and proj_type == project_lang:
+			# loop through the projects in the Programming Language folder the user requests
+			for proj in os.listdir(src_folder + project_lang):
+				# if the project folder matches the one the user wants and is a folder
+				if proj == target_project and os.path.isdir(src_folder + project_lang + f'/{proj}'):
+					found = True
+					print("\nFiles in " + src_folder + f'{project_lang + "/" + proj}')
+					for file in os.listdir(src_folder + f'{project_lang + "/" + proj}'):
+						sys.stdout.write('  └> ')
+						if os.path.isdir( src_folder + f'{project_lang + proj}' + '/' + file):
+							sys.stdout.write('\u001b[34;1m' + file )
+						else:
+							sys.stdout.write(file)
+						fix_color()
+	if not found:
+		print("Failed to locate project " + proj)
+	
+
+# create a new project
+def create_project(project_name: str, project_language = None)->None:
+	# if the user did not specify the programming language for the project before-hand
+	if project_language is None:
+		project_language = input("What language will this be done in?  : ").title()
+	
+	# if the language the user entered is valid
+	if verify_language(project_language):
+		Proj_Dir = os.getcwd() + '/Code'
+		# if the Code folder is non-existent
+		if not check_code_folder():
+			if not prompt_create():
+				sys.exit(1)
+		# if the Programming Language folder does not exist, it'll make one
+		if not os.path.exists(Proj_Dir + f'/{project_language}'):
+			print(f'Making {project_language} folder....')
+			# create the folder
+			shell_exec = sub.getstatusoutput(f'mkdir {Proj_Dir + "/" + project_language}')
+			# if it failed to make the folder
+			if shell_exec[0] != 0:
+				print(f"There was an error making the folder for {project_language}. Take a look:")
+				print(shell_exec[1])
+				sys.exit(2)
+		# create the project folder
+		shell_exec2 = sub.getstatusoutput(f'mkdir {Proj_Dir + "/" + project_language + "/" + project_name}')
+		# if the project folder failed to be created
+		if shell_exec2[0] != 0:
+			print(f"There was an error making your project. Take a a look:")
+			print(shell_exec2[1])
+			sys.exit(2)
+		# everything ran flawlessly :)
+		else:
+			print(f"Success.\nProject is now under: {f'{Proj_Dir}/{project_language}/{project_name}'}")
+
+	else:
+		print(f'Invalid Language. Unknown programming language {project_language}')
+		exit(1)		
+
+
+
+# zip a project
+def zip_project(project: str)->None:
+	if not prompt_create():
+		sys.exit(1)
+
+	folder = os.getcwd() + "/Code/"
+	found = False
+	projects = list()
+	folderlocation = None
+	# loop through the Programming Language folders
+	for proj_type in os.listdir(folder):
+		# if the folder is a directory
+		if os.path.isdir(folder  + proj_type):
+			current_folder = folder + proj_type + '/'
+			# loop through all the projects under the current Programming Language Folder
+			for proj in os.listdir(current_folder):
+				# if the current file is a folder and if the project matche the one the user wants
+				if os.path.isdir(current_folder + proj) and proj == project:
+					# append to a list of projects (in case there are multiple projects with matching names)
+					projects.append(current_folder + project)
+
+	# there are multiple projects with similar names
+	if len(projects) > 1:
+		print("There are multiple projects with the same name.")
+		print("Choose a project to zip:\n")
+		# make an interface for the user to choose what project they want
+		for proj in enumerate(projects):
+			print(proj[0], ' :  ', proj[1])
+		choice = None
+		
+		# try to take the user's input and turn it into an integer. except if the user does not enter an int
+		try:
+			choice = int(input('>> '))
+		except Exception as e:
+			print("You did not enter a valid choice.")
+			print(e)
+			return
+		choicemade = False
+		# check if the user has chosen a proper choice
+		for proj in enumerate(projects):
+			# user chose a proper choice
+			if choice == proj[0]:
+				choicemade = True
+				print("zipping...")
+				# zip the project
+				proc = sub.getstatusoutput(f'cd {proj[1].replace(project, "")} && zip {project}.zip -r -D {project} && mv {project}.zip {os.getcwd()}')
+				# if there was a problem zipping
+				if proc[0] != 0:
+					print("There was a problem zipping... Take a look:\n")
+					print(proc[1])
+					return
+				# if it zipped flawlessly
+				else:
+					print("Success.")
+					return
+		# if the user did not choose a valid choice
+		if not choicemade:
+			print("You did not enter a proper choice.")
+	# if there was only one occurence of the project
+	elif len(projects) == 1:
+		print("zipping...")
+		# zip the project
+		proc = sub.getstatusoutput(f'cd {projects[0].replace(project, "")} && zip {project}.zip -r -D {project} && mv {project}.zip {os.getcwd()}')
+		# if there was an error zipping
+		if proc[0] != 0:
+			print("There was a problem zipping... Take a look:\n")
+			print(proc[1])
+			return
+		# if no problems occurred
+		else:
+			print("Success.")
+	# failed to find the project the user was looking for
+	else:
+		print("There were no projects named " + project)
+
+
+if __name__ == '__main__':
+	if sys.platform != 'linux':
+		print("This program will run specifically on linux. Sorry :(")
+
+	if len(sys.argv) <= 1: # no arguments were supplied
+		print_usage()
+	# else take interpret the arguments
+	else:
+		args = sys.argv[1:]					# take the user's input
+		wait_for_proj_list = False			# flags/bools to wait for a specific input
+		wait_for_proj_find = False
+		wait_for_proj_zip  = False
+		wait_for_proj_create = False
+
+		# loop through the args
+		for arg in args:
+
+			# previously called the "list projects" argument
+			if wait_for_proj_list:
+				wait_for_proj_list = False
+				project = arg
+				if len(project.split(':type-')) == 2:
+					lang = project.split(':type-')[1]
+					project = project.split(':type-')[0]
+					find_and_print_project(project, lang)
+				elif len(project.split(':type-')) > 2:
+					print(u'Invalid string: ' + Color.FG_RED + project)
+					print(ArgHelp.lsp)
+					fix_color()
+					exit(1)
+				else:
+					if len(project) == 0:
+						print('No project was supplied.')
+						print(ArgHelp.lsp)
+						sys.exit(1)
+					find_and_print_project(project)
+
+			# previously called the "find my project" argument
+			elif wait_for_proj_find:
+				wait_for_proj_find = False
+				project = arg
+				if len(project.split(':type-')) == 2:
+					lang = project.split(':type-')[1]
+					project = project.split(':type-')[0]
+					find_project(project, lang)
+				elif len(project.split(':type-')) > 2:
+					print(u'Invalid string: ' + Color.FG_RED + project)
+					print(ArgHelp.find)
+					fix_color()
+					exit(1)
+				else:
+					if len(project) == 0:
+						print('No project was supplied.')
+						print(ArgHelp.find)
+						sys.exit(1)
+					find_project(project)
+
+			# previously called the "zip my project" argument
+			elif wait_for_proj_zip:
+				wait_for_proj_zip = False
+				project = arg
+				if len(project.split(':type-')) == 2:
+					lang = project.split(':type-')[1]
+					project = project.split(':type-')[0]
+					zip_project(project, lang)
+				elif len(project.split(':type-')) > 2:
+					print(u'Invalid string: ' + Color.FG_RED + project)
+					print(ArgHelp.zip)
+					fix_color()
+					exit(1)
+				else:
+					if len(project) == 0:
+						print('No project was supplied.')
+						print(ArgHelp.zip)
+						sys.exit(1)
+					zip_project(project)
+			
+			# previously called the "create a new project" argument
+			elif wait_for_proj_create:
+				wait_for_proj_create = False
+				project = arg
+				if len(project.split(':type-')) == 2:
+					lang = project.split(':type-')[1]
+					project = project.split(':type-')[0]
+					create_project(project, lang)
+				elif len(project.split(':type-')) > 2:
+					print(u'Invalid string: ' + Color.FG_RED + project)
+					print(ArgHelp.np)
+					fix_color()
+					exit(1)
+				else:
+					if len(project) == 0:
+						print('No project was supplied.')
+						print(ArgHelp.np)
+						sys.exit(1)
+					create_project(project)
+
+			# called help command
+			elif arg in Arg.help:
+				print_usage()
+				sys.exit(0)
+
+			elif arg in Arg.ls:
+				if prompt_create():
+					# get the list of the files and folders in the Code folder
+					l_files = os.listdir(os.getcwd() + '/Code')
+					folders = list()
+					
+					# loop through the files in the Code folder to find all the folders (since we don't want the files yet)
+					for file in l_files:
+						# if the current file is a folder, output the folder
+						if os.path.isdir(os.getcwd() + '/Code/' + file):
+							folders.append(file)
+					# Sort the folders
+					folders.sort()
+
+					# Loop through all the projects and output any projects (only folders)
+					for folder in folders:
+						sys.stdout.write(format_color_folder(folder) + '\n')
+						# there are no projects in your Programming Language folder
+						if len(os.listdir(os.getcwd() + '/Code/' + folder + '/')) == 0:
+							sys.stdout.write('    No Projects in here\n')
+						# there are projects in the Programming Language folder
+						else:
+							# loop through the Projects in the Programming Language folder
+							for file in os.listdir(os.getcwd() + '/Code/' + folder + '/'):
+								if os.path.isdir(os.getcwd() + '/Code/' + folder+ '/' + file):
+									sys.stdout.write(u'  \u001b[0m└> ' + file + '\n')
+					# return the colors
+					fix_color()
+
+			# user wants to create the folder
+			elif arg in Arg.create:
+				if prompt_create():
+					print("It seems like you already have a folder called Code in your current directory. We'll leave it alone.")
+			
+			# list files in a project
+			elif arg.split('=')[0] in Arg.lsproj:
+				project = arg.split('=')[1]
+				# user entered: "-lp=MyProject"
+				if len(arg.split('=')) == 2:
+					proj = arg.split('=')[1]
+					# user entered "-lp=MyProject:type-PROGRAM_LANGUAGE"
+					if len(project.split(':type-')) == 2:
+						lang = project.split(':type-')[1]
+						project = project.split(':type-')[0]
+						find_and_print_project(project, lang)
+					elif len(project.split(':type-')) > 2:
+						print(u'Invalid string: ' + Color.FG_RED + project)
+						print(ArgHelp.lsp)
+						fix_color()
+						exit(1)
+					else:
+						if len(project) == 0:
+							print("No project name was supplied.")
+							print(ArgHelp.lsp)
+							sys.exit(1)
+						find_and_print_project(project)
+				else:
+					wait_for_proj_list = True
+
+			# find a project's location
+			elif arg.split('=')[0] in Arg.find:
+				if len(arg.split('=')) == 2:
+					if len(project.split(':type-')) == 2:
+						lang = project.split(':type-')[1]
+						project = project.split(':type-')[0]
+						find_project(project, lang)
+					elif len(project.split(':type-')) > 2:
+						print(u'Invalid string: ' + Color.FG_RED + project)
+						fix_color()
+						exit(1)
+					else:
+						if len(project) == 0:
+							print("No Project was supplied")
+							print(ArgHelp.find)
+							sys.exit(1)
+						find_project(project)
+				else:
+					wait_for_proj_find = True
+			
+			# zip a project
+			elif arg.split('=')[0] in Arg.zipp:
+				if len(arg.split('=')) == 2:
+					project = arg.split('=')[1]
+					if ':type-' in project:
+						print(u'Invalid string: ' + Color.FG_RED + project)
+						fix_color()
+						exit(1)
+					else:
+						if len(project) == 0:
+							print("No Project was supplied")
+							print(ArgHelp.zip)
+							sys.exit(1)
+						zip_project(project)
+				else:
+					wait_for_proj_zip = True
+			
+			# create a new project
+			elif arg.split('=')[0] in Arg.newproj:
+				if len(arg.split('=')) == 2:
+					project = arg.split('=')[1]
+					if len(project.split(':type-')) == 2:
+						lang = project.split(':type-')[1]
+						project = project.split(':type-')[0]
+						create_project(project, lang)
+					elif len(project.split(':type-')) > 2:
+						print(u'Invalid string: ' + Color.FG_RED + project)
+						fix_color()
+						exit(1)
+					else:
+						if len(project) == 0:
+							print('No project was supplied.')
+							print(ArgHelp.np)
+							sys.exit(1)
+						create_project(project)
+				else:
+					wait_for_proj_create = True
+
+			# user did not enter a valid argument
+			else:
+				print(u'Unknown argument: ' + Color.FG_RED + arg)
+				fix_color()
+				exit(1)
